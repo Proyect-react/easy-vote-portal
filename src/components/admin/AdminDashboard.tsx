@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart3, Database, Brain, TrendingUp } from "lucide-react";
 import ResultsView from "./ResultsView";
 import DataProcessing from "./DataProcessing";
 import ModelTraining from "./ModelTraining";
@@ -58,35 +59,66 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-        <p className="text-muted-foreground">Cargando datos...</p>
+        <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+        <p className="text-lg text-muted-foreground">Cargando panel de administración...</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 animate-fade-in">
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold mb-2">Dashboard Electoral</h2>
+        <p className="text-muted-foreground">
+          Sistema completo de análisis de datos con Machine Learning
+        </p>
+      </div>
+
       <Tabs defaultValue="results" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="results">Resultados</TabsTrigger>
-          <TabsTrigger value="processing">Procesamiento</TabsTrigger>
-          <TabsTrigger value="training">Entrenamiento</TabsTrigger>
-          <TabsTrigger value="analytics">Análisis</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 h-auto p-1 bg-muted">
+          <TabsTrigger 
+            value="results" 
+            className="flex items-center gap-2 py-3 data-[state=active]:gradient-hero data-[state=active]:text-white transition-all"
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span className="hidden md:inline">Resultados</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="processing"
+            className="flex items-center gap-2 py-3 data-[state=active]:gradient-hero data-[state=active]:text-white transition-all"
+          >
+            <Database className="w-4 h-4" />
+            <span className="hidden md:inline">Procesamiento</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="training"
+            className="flex items-center gap-2 py-3 data-[state=active]:gradient-hero data-[state=active]:text-white transition-all"
+          >
+            <Brain className="w-4 h-4" />
+            <span className="hidden md:inline">Entrenamiento</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="analytics"
+            className="flex items-center gap-2 py-3 data-[state=active]:gradient-hero data-[state=active]:text-white transition-all"
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span className="hidden md:inline">Análisis</span>
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="results">
+        <TabsContent value="results" className="animate-fade-in">
           <ResultsView votes={votes} candidates={candidates} />
         </TabsContent>
 
-        <TabsContent value="processing">
+        <TabsContent value="processing" className="animate-fade-in">
           <DataProcessing votes={votes} />
         </TabsContent>
 
-        <TabsContent value="training">
+        <TabsContent value="training" className="animate-fade-in">
           <ModelTraining votes={votes} candidates={candidates} />
         </TabsContent>
 
-        <TabsContent value="analytics">
+        <TabsContent value="analytics" className="animate-fade-in">
           <Analytics votes={votes} candidates={candidates} />
         </TabsContent>
       </Tabs>

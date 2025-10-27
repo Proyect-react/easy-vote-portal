@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User, Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { LogOut, Vote } from "lucide-react";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminLogin from "@/components/admin/AdminLogin";
 
@@ -66,10 +66,10 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Cargando...</p>
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+          <p className="text-lg text-muted-foreground">Verificando permisos...</p>
         </div>
       </div>
     );
@@ -80,14 +80,34 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Panel de Administración</h1>
-          <Button onClick={handleLogout} variant="outline">
-            <LogOut className="w-4 h-4 mr-2" />
-            Cerrar Sesión
-          </Button>
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 gradient-hero rounded-lg flex items-center justify-center">
+                <Vote className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Panel de Administración</h1>
+                <p className="text-sm text-muted-foreground">Sistema Electoral Digital</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden md:block text-right">
+                <p className="text-sm font-medium">{user.email}</p>
+                <p className="text-xs text-muted-foreground">Administrador</p>
+              </div>
+              <Button 
+                onClick={handleLogout} 
+                variant="outline"
+                className="hover:scale-105 transition-all"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Cerrar Sesión
+              </Button>
+            </div>
+          </div>
         </div>
       </header>
       <AdminDashboard />

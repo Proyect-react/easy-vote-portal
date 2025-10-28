@@ -87,7 +87,15 @@ const DataProcessing = ({ votes }: DataProcessingProps) => {
               variant="outline"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Limpiar Datos
+              Limpiar Datos Null
+            </Button>
+            <Button
+              onClick={cleanData}
+              disabled={processing || !dataQuality}
+              variant="outline"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Quitar Duplicados
             </Button>
             <Button
               onClick={normalizeData}
@@ -198,9 +206,7 @@ const DataProcessing = ({ votes }: DataProcessingProps) => {
               </h4>
               <ul className="text-sm space-y-1 text-muted-foreground">
                 <li>• Detección de valores nulos y faltantes</li>
-                <li>• Validación de formato de emails</li>
                 <li>• Identificación de duplicados</li>
-                <li>• Detección de outliers estadísticos</li>
                 <li>• Normalización de texto y datos</li>
               </ul>
             </CardContent>

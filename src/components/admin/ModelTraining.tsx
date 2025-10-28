@@ -228,8 +228,6 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
                 <Badge>Scikit-learn</Badge>
                 <Badge>NumPy</Badge>
                 <Badge>Pandas</Badge>
-                <Badge>Random Forest</Badge>
-                <Badge>Cross-Validation</Badge>
               </div>
             </CardContent>
           </Card>

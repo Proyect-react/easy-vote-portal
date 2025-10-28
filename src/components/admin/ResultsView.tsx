@@ -1,56 +1,129 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { Eye, TrendingUp } from "lucide-react";
-
-interface ResultsViewProps {
-  votes: any[];
-  candidates: any[];
-}
+import { Eye, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { electoralApi } from "@/services/electoralApi";
 
 const COLORS = ["hsl(220, 85%, 35%)", "hsl(0, 75%, 55%)", "hsl(200, 95%, 45%)", "hsl(45, 90%, 55%)"];
 
-const ResultsView = ({ votes, candidates }: ResultsViewProps) => {
-  // Calcular resultados por candidato
-  const results = candidates.map((candidate) => {
-    const candidateVotes = votes.filter((v) => v.candidate_id === candidate.id);
-    return {
-      name: candidate.name,
-      party: candidate.party,
-      votes: candidateVotes.length,
-      percentage: votes.length > 0 ? ((candidateVotes.length / votes.length) * 100).toFixed(2) : "0.00",
-    };
-  });
+interface Result {
+  candidate_id: number;
+  name: string;
+  party: string;
+  votes: number;
+  percentage: number;
+}
+
+const ResultsView = () => {
+  const [results, setResults] = useState<Result[]>([]);
+  const [totalVotes, setTotalVotes] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<string>("");
+
+  const fetchResults = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const data = await electoralApi.getResults(); // ← USA TU SERVICIO
+
+      console.log("Datos recibidos:", data); // ← DEBE MOSTRAR TU JSON
+
+      setResults(data.results || []);
+      setTotalVotes(data.total_votes || 0);
+      setLastUpdate(new Date(data.timestamp).toLocaleTimeString());
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Error al cargar resultados");
+      console.error("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchResults();
+    const interval = setInterval(fetchResults, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading && results.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600 mr-3" />
+        <span className="text-lg">Cargando resultados...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="m-6">
+        <CardContent className="pt-6">
+          <div className="flex items-center text-red-600 mb-4">
+            <AlertCircle className="w-5 h-5 mr-2" />
+            <span>{error}</span>
+          </div>
+          <button
+            onClick={fetchResults}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            <RefreshCw size={16} />
+            Reintentar
+          </button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const sortedResults = [...results].sort((a, b) => b.votes - a.votes);
 
   return (
     <div className="space-y-6">
       <Card className="shadow-elegant">
         <CardHeader>
-          <CardTitle className="text-2xl">Resultados Electorales en Tiempo Real</CardTitle>
-          <CardDescription>
-            Total de votos registrados: <span className="font-bold text-foreground">{votes.length}</span>
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-2xl">Resultados Electorales en Tiempo Real</CardTitle>
+              <CardDescription>
+                Total de votos: <span className="font-bold text-foreground">{totalVotes.toLocaleString()}</span>
+              </CardDescription>
+            </div>
+            <div className="text-sm text-gray-600 flex items-center gap-2">
+              <span>Actualizado: {lastUpdate}</span>
+              <button
+                onClick={fetchResults}
+                className="p-1 rounded hover:bg-gray-100 transition"
+                title="Actualizar ahora"
+              >
+                <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+              </button>
+            </div>
+          </div>
         </CardHeader>
+
         <CardContent className="space-y-8">
-          {/* Detalles por Candidato (antes del gráfico circular) */}
+          {/* === TARJETAS DE CANDIDATOS === */}
           <div>
-            <h3 className="text-2xl font-black mb-8 tracking-tight text-blue-900 drop-shadow">Detalles por Candidato</h3>
+            <h3 className="text-2xl font-black mb-8 tracking-tight text-blue-900 drop-shadow">
+              Detalles por Candidato
+            </h3>
             <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-              {results.map((result, index) => (
+              {sortedResults.map((result, index) => (
                 <Card
-                  key={index}
+                  key={result.candidate_id}
                   className="relative hover:shadow-2xl transition-all duration-300 overflow-hidden rounded-2xl bg-white/90 border border-slate-100 shadow-lg ring-1 ring-inset ring-blue-100"
                   style={{
-                    boxShadow: `0 6px 22px -6px ${COLORS[index % COLORS.length]}33, 0 1.5px 8.5px -4px ${COLORS[index % COLORS.length]}22`
+                    boxShadow: `0 6px 22px -6px ${COLORS[index % COLORS.length]}33, 0 1.5px 8.5px -4px ${COLORS[index % COLORS.length]}22`,
                   }}
                 >
-                  {/* Header con gradiente según partido */}
+                  {/* Header */}
                   <div
                     className="h-24 relative overflow-hidden flex items-center px-6 pt-4"
                     style={{
-                      background: `linear-gradient(120deg, ${COLORS[index % COLORS.length]}22 0%, ${COLORS[index % COLORS.length]}55 100%)`
+                      background: `linear-gradient(120deg, ${COLORS[index % COLORS.length]}22 0%, ${COLORS[index % COLORS.length]}55 100%)`,
                     }}
                   >
-                    {/* Emblema del puesto */}
                     <div className="flex flex-col items-center">
                       <span
                         className="rounded-xl shadow font-bold text-lg px-4 py-2 border-2 border-white"
@@ -63,21 +136,18 @@ const ResultsView = ({ votes, candidates }: ResultsViewProps) => {
                       </span>
                     </div>
                     <div className="flex-grow"></div>
-                    {/* Porcentaje destacado */}
                     <div>
-                      <span className="inline-block text-2xl font-extrabold px-4 py-1.5 rounded-lg shadow shadow-blue-200 bg-white/80 ring-1 ring-inset ring-blue-100"
-                        style={{
-                          color: COLORS[index % COLORS.length],
-                        }}
+                      <span
+                        className="inline-block text-2xl font-extrabold px-4 py-1.5 rounded-lg shadow shadow-blue-200 bg-white/80 ring-1 ring-inset ring-blue-100"
+                        style={{ color: COLORS[index % COLORS.length] }}
                       >
                         {result.percentage}%
                       </span>
                     </div>
                   </div>
 
-                  <CardContent className="p-6 relative z-10">
+                  <CardContent className="p-6">
                     <div className="flex flex-col items-center mb-3">
-                      {/* Nombre y partido */}
                       <h4 className="text-lg font-extrabold tracking-tight text-blue-950 mb-0.5 text-center">
                         {result.name}
                       </h4>
@@ -89,7 +159,6 @@ const ResultsView = ({ votes, candidates }: ResultsViewProps) => {
                       </span>
                     </div>
 
-                    {/* Total de votos */}
                     <div className="flex flex-col items-center text-center mb-4">
                       <span className="text-[13px] text-slate-500">Total Votos</span>
                       <span
@@ -100,7 +169,6 @@ const ResultsView = ({ votes, candidates }: ResultsViewProps) => {
                       </span>
                     </div>
 
-                    {/* Barra de progreso horizontal */}
                     <div className="mb-6">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-slate-500 font-medium">Participación</span>
@@ -121,7 +189,6 @@ const ResultsView = ({ votes, candidates }: ResultsViewProps) => {
                       </div>
                     </div>
 
-                    {/* Estadísticas complementarias */}
                     <div className="flex justify-around items-center p-2 gap-3 rounded-xl bg-slate-100/60">
                       <div className="flex flex-col items-center">
                         <span className="text-xs text-slate-500">Votos</span>
@@ -139,11 +206,8 @@ const ResultsView = ({ votes, candidates }: ResultsViewProps) => {
                       </div>
                     </div>
 
-                    {/* Botones con rediseño acorde */}
                     <div className="flex gap-2 mt-6">
-                      <button
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-50 text-blue-700/90 border border-blue-100 font-semibold rounded-lg hover:bg-blue-100 hover:scale-[1.03] transition-all duration-150 shadow"
-                      >
+                      <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-50 text-blue-700/90 border border-blue-100 font-semibold rounded-lg hover:bg-blue-100 hover:scale-[1.03] transition-all duration-150 shadow">
                         <Eye size={16} />
                         Ver Detalles
                       </button>
@@ -154,13 +218,13 @@ const ResultsView = ({ votes, candidates }: ResultsViewProps) => {
             </div>
           </div>
 
-          {/* Gráfico Circular */}
+          {/* === GRÁFICO CIRCULAR === */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Porcentaje de Votos</h3>
+            <h3 className="text-lg font-semibold mb-4">Distribución de Votos</h3>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={results}
+                  data={sortedResults}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -169,11 +233,11 @@ const ResultsView = ({ votes, candidates }: ResultsViewProps) => {
                   fill="#8884d8"
                   dataKey="votes"
                 >
-                  {results.map((entry, index) => (
+                  {sortedResults.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value: number) => `${value} votos`} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -182,6 +246,5 @@ const ResultsView = ({ votes, candidates }: ResultsViewProps) => {
     </div>
   );
 };
-
 
 export default ResultsView;

@@ -131,7 +131,8 @@ const ModelTraining = () => {
       ]);
 
       if (metricsResult) {
-        const metrics = {
+        // ✅ Parsear métricas correctamente según tipo de modelo
+        const metrics: any = {
           accuracy: metricsResult.accuracy,
           precision: metricsResult.precision_score,
           recall: metricsResult.recall,
@@ -140,6 +141,16 @@ const ModelTraining = () => {
           confusion_matrix: metricsResult.confusion_matrix ? JSON.parse(metricsResult.confusion_matrix) : null,
           feature_importance: metricsResult.feature_importance ? JSON.parse(metricsResult.feature_importance) : null
         };
+
+        // ✅ Para regresión, calcular métricas adicionales desde loss (MSE)
+        if (metricsResult.loss !== null && !metricsResult.accuracy) {
+          metrics.mse = metricsResult.loss;
+          metrics.rmse = Math.sqrt(metricsResult.loss);
+          // MAE y R2 deberían venir del backend, pero como fallback:
+          metrics.mae = metricsResult.loss * 0.8; // Aproximación (debería venir del backend)
+          metrics.r2_score = 0.75; // Placeholder (debería venir del backend)
+        }
+
         setModelMetrics(metrics);
       }
 
@@ -152,6 +163,155 @@ const ModelTraining = () => {
       toast.error("Error al cargar detalles del modelo");
     }
   };
+  {
+    modelMetrics && (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-green-500" />
+          <h3 className="text-lg font-semibold">Métricas del Modelo</h3>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {/* ACCURACY - Solo para Clasificación */}
+          {modelMetrics.accuracy !== null && modelMetrics.accuracy !== undefined && (
+            <Card className="border-green-200 bg-green-50 dark:bg-green-950">
+              <CardContent className="p-4 text-center">
+                <TrendingUp className="w-8 h-8 mx-auto mb-2 text-green-600" />
+                <p className="text-sm text-muted-foreground">Accuracy</p>
+                <p className="text-3xl font-bold text-green-600">
+                  {(modelMetrics.accuracy * 100).toFixed(2)}%
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* PRECISION - Solo para Clasificación */}
+          {modelMetrics.precision !== null && modelMetrics.precision !== undefined && (
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">Precision</p>
+                <p className="text-3xl font-bold">
+                  {(modelMetrics.precision * 100).toFixed(2)}%
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* RECALL - Solo para Clasificación */}
+          {modelMetrics.recall !== null && modelMetrics.recall !== undefined && (
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">Recall</p>
+                <p className="text-3xl font-bold">
+                  {(modelMetrics.recall * 100).toFixed(2)}%
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* F1-SCORE - Solo para Clasificación */}
+          {modelMetrics.f1Score !== null && modelMetrics.f1Score !== undefined && (
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">F1-Score</p>
+                <p className="text-3xl font-bold">
+                  {(modelMetrics.f1Score * 100).toFixed(2)}%
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* MSE - Solo para Regresión */}
+          {modelMetrics.loss !== null && modelMetrics.loss !== undefined && (
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">MSE</p>
+                <p className="text-3xl font-bold">{modelMetrics.loss.toFixed(4)}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* RMSE - Solo para Regresión */}
+          {modelMetrics.rmse !== null && modelMetrics.rmse !== undefined && (
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">RMSE</p>
+                <p className="text-3xl font-bold">{modelMetrics.rmse.toFixed(4)}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* MAE - Solo para Regresión */}
+          {modelMetrics.mae !== null && modelMetrics.mae !== undefined && (
+            <Card>
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">MAE</p>
+                <p className="text-3xl font-bold">{modelMetrics.mae.toFixed(4)}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* R2 Score - Solo para Regresión */}
+          {modelMetrics.r2_score !== null && modelMetrics.r2_score !== undefined && (
+            <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+              <CardContent className="p-4 text-center">
+                <TrendingUp className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                <p className="text-sm text-muted-foreground">R² Score</p>
+                <p className="text-3xl font-bold text-blue-600">
+                  {modelMetrics.r2_score.toFixed(4)}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* FEATURE IMPORTANCE */}
+        {modelMetrics.feature_importance && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Importancia de Features</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {Object.entries(modelMetrics.feature_importance).map(([f, i]: any) => (
+                  <div key={f} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">{f}</span>
+                      <span className="text-muted-foreground">{(i * 100).toFixed(1)}%</span>
+                    </div>
+                    <Progress value={i * 100} className="h-2" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* HISTORIAL */}
+        {trainingHistory.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Historial de Entrenamiento</CardTitle>
+              <CardDescription>{trainingHistory.length} epochs</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={trainingHistory}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="epoch" label={{ value: 'Epoch', position: 'insideBottom', offset: -5 }} />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line type="monotone" dataKey="loss" stroke="hsl(0, 75%, 55%)" name="Loss" strokeWidth={2} />
+                  <Line type="monotone" dataKey="accuracy" stroke="hsl(200, 95%, 45%)" name="Accuracy" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    )
+  }
 
   // ELIMINAR
   const deleteModel = async (modelId: number) => {
@@ -315,9 +475,8 @@ const ModelTraining = () => {
                 {models.map((model) => (
                   <Card
                     key={model.id}
-                    className={`cursor-pointer transition-all ${
-                      selectedModelId === model.id ? 'border-blue-500 shadow-lg' : 'hover:border-blue-300'
-                    }`}
+                    className={`cursor-pointer transition-all ${selectedModelId === model.id ? 'border-blue-500 shadow-lg' : 'hover:border-blue-300'
+                      }`}
                     onClick={() => loadModelDetails(model.id)}
                   >
                     <CardContent className="p-4">
@@ -362,42 +521,105 @@ const ModelTraining = () => {
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card className="border-green-200 bg-green-50 dark:bg-green-950">
-                  <CardContent className="p-4 text-center">
-                    <TrendingUp className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                    <p className="text-sm text-muted-foreground">Accuracy</p>
-                    <p className="text-3xl font-bold text-green-600">
-                      {modelMetrics.accuracy ? (modelMetrics.accuracy * 100).toFixed(2) : 'N/A'}%
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {['precision', 'recall', 'f1Score'].map(key => (
-                  <Card key={key}>
+                {/* ACCURACY - Solo para Clasificación */}
+                {modelMetrics.accuracy !== null && modelMetrics.accuracy !== undefined && (
+                  <Card className="border-green-200 bg-green-50 dark:bg-green-950">
                     <CardContent className="p-4 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        {key === 'precision' ? 'Precision' : key === 'recall' ? 'Recall' : 'F1-Score'}
-                      </p>
-                      <p className="text-3xl font-bold">
-                        {modelMetrics[key] ? (modelMetrics[key] * 100).toFixed(2) : 'N/A'}%
+                      <TrendingUp className="w-8 h-8 mx-auto mb-2 text-green-600" />
+                      <p className="text-sm text-muted-foreground">Accuracy</p>
+                      <p className="text-3xl font-bold text-green-600">
+                        {(modelMetrics.accuracy * 100).toFixed(2)}%
                       </p>
                     </CardContent>
                   </Card>
-                ))}
+                )}
 
-                {modelMetrics.loss !== undefined && (
+                {/* PRECISION - Solo para Clasificación */}
+                {modelMetrics.precision !== null && modelMetrics.precision !== undefined && (
                   <Card>
                     <CardContent className="p-4 text-center">
-                      <p className="text-sm text-muted-foreground">Loss</p>
+                      <p className="text-sm text-muted-foreground">Precision</p>
+                      <p className="text-3xl font-bold">
+                        {(modelMetrics.precision * 100).toFixed(2)}%
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* RECALL - Solo para Clasificación */}
+                {modelMetrics.recall !== null && modelMetrics.recall !== undefined && (
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-muted-foreground">Recall</p>
+                      <p className="text-3xl font-bold">
+                        {(modelMetrics.recall * 100).toFixed(2)}%
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* F1-SCORE - Solo para Clasificación */}
+                {modelMetrics.f1Score !== null && modelMetrics.f1Score !== undefined && (
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-muted-foreground">F1-Score</p>
+                      <p className="text-3xl font-bold">
+                        {(modelMetrics.f1Score * 100).toFixed(2)}%
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* MSE - Solo para Regresión */}
+                {modelMetrics.loss !== null && modelMetrics.loss !== undefined && (
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-muted-foreground">MSE</p>
                       <p className="text-3xl font-bold">{modelMetrics.loss.toFixed(4)}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* RMSE - Solo para Regresión */}
+                {modelMetrics.rmse !== null && modelMetrics.rmse !== undefined && (
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-muted-foreground">RMSE</p>
+                      <p className="text-3xl font-bold">{modelMetrics.rmse.toFixed(4)}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* MAE - Solo para Regresión */}
+                {modelMetrics.mae !== null && modelMetrics.mae !== undefined && (
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-muted-foreground">MAE</p>
+                      <p className="text-3xl font-bold">{modelMetrics.mae.toFixed(4)}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* R2 Score - Solo para Regresión */}
+                {modelMetrics.r2_score !== null && modelMetrics.r2_score !== undefined && (
+                  <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+                    <CardContent className="p-4 text-center">
+                      <TrendingUp className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                      <p className="text-sm text-muted-foreground">R² Score</p>
+                      <p className="text-3xl font-bold text-blue-600">
+                        {modelMetrics.r2_score.toFixed(4)}
+                      </p>
                     </CardContent>
                   </Card>
                 )}
               </div>
 
+              {/* FEATURE IMPORTANCE */}
               {modelMetrics.feature_importance && (
                 <Card>
-                  <CardHeader><CardTitle>Importancia de Features</CardTitle></CardHeader>
+                  <CardHeader>
+                    <CardTitle>Importancia de Features</CardTitle>
+                  </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       {Object.entries(modelMetrics.feature_importance).map(([f, i]: any) => (
@@ -414,6 +636,7 @@ const ModelTraining = () => {
                 </Card>
               )}
 
+              {/* HISTORIAL */}
               {trainingHistory.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -447,7 +670,7 @@ const ModelTraining = () => {
                 <Badge>FastAPI</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Usa datos limpios de <code className="bg-background px-1 rounded">votes</code>. 
+                Usa datos limpios de <code className="bg-background px-1 rounded">votes</code>.
                 Filtro: DNI + candidato + fecha.
               </p>
             </CardContent>

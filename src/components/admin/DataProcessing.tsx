@@ -110,29 +110,49 @@ const DataProcessing = () => {
   const getVoteIssues = (vote: any) => {
     const issues = [];
     
-    // Detectar nombre vacío o null
-    if (!vote.voter_name || vote.voter_name === 'N/A' || (typeof vote.voter_name === 'string' && vote.voter_name.trim() === '')) {
+    // Detectar nombre null o vacío
+    if (vote.voter_name === null || vote.voter_name === undefined || 
+        (typeof vote.voter_name === 'string' && vote.voter_name.trim() === '')) {
       issues.push("Sin nombre");
     }
     
-    // Detectar email vacío, null o inválido
-    if (!vote.voter_email || vote.voter_email === 'N/A' || (typeof vote.voter_email === 'string' && vote.voter_email.trim() === '')) {
+    // Detectar email null, vacío o inválido
+    if (vote.voter_email === null || vote.voter_email === undefined || 
+        (typeof vote.voter_email === 'string' && vote.voter_email.trim() === '')) {
       issues.push("Sin email");
-    } else if (!vote.voter_email.includes("@")) {
+    } else if (typeof vote.voter_email === 'string' && !vote.voter_email.includes("@")) {
       issues.push("Email inválido");
     }
     
-    if (!vote.voter_location) issues.push("Sin ubicación");
+    // Detectar ubicación null o vacía
+    if (vote.voter_location === null || vote.voter_location === undefined || 
+        (typeof vote.voter_location === 'string' && vote.voter_location.trim() === '')) {
+      issues.push("Sin ubicación");
+    }
     
-    if (!vote.candidate_id) issues.push("Sin candidato");
+    // Detectar candidato null
+    if (vote.candidate_id === null || vote.candidate_id === undefined) {
+      issues.push("Sin candidato");
+    }
 
     // Detectar duplicados (solo si tiene email válido)
-    if (vote.voter_email && vote.voter_email.trim() !== '') {
+    if (vote.voter_email && typeof vote.voter_email === 'string' && vote.voter_email.trim() !== '') {
       const duplicates = votes.filter(v => v.voter_email === vote.voter_email);
       if (duplicates.length > 1) issues.push("Duplicado");
     }
 
     return issues;
+  };
+  
+  // Función auxiliar para mostrar valores con detección de null
+  const displayValue = (value: any, fieldName: string = '') => {
+    if (value === null || value === undefined) {
+      return <span className="text-red-600 font-semibold">NULL</span>;
+    }
+    if (typeof value === 'string' && value.trim() === '') {
+      return <span className="text-orange-600 font-semibold">VACÍO</span>;
+    }
+    return value;
   };
 
   const exportToCSV = () => {
@@ -320,8 +340,8 @@ const DataProcessing = () => {
                         return (
                           <tr key={vote.id} className={`hover:bg-muted/50 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
                             <td className="px-4 py-3 font-mono text-xs">{vote.id}</td>
-                            <td className="px-4 py-3">{vote.voter_name || <span className="text-red-500">N/A</span>}</td>
-                            <td className="px-4 py-3">{vote.voter_email || <span className="text-red-500">N/A</span>}</td>
+                            <td className="px-4 py-3">{vote.voter_name || <span className="text-red-500">Null</span>}</td>
+                            <td className="px-4 py-3">{vote.voter_email || <span className="text-red-500">Null</span>}</td>
                             <td className="px-4 py-3">{vote.voter_location || <span className="text-yellow-500">Sin ubicación</span>}</td>
                             <td className="px-4 py-3 font-mono text-xs">{vote.candidate_id || "N/A"}</td>
                             <td className="px-4 py-3 text-xs">{new Date(vote.voted_at).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })}</td>

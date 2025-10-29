@@ -16,7 +16,6 @@ const DataProcessing = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Cargar votos al montar el componente
   useEffect(() => {
     loadVotes();
   }, []);
@@ -41,7 +40,7 @@ const DataProcessing = () => {
       if (result.success) {
         setDataQuality(result);
         toast.success("Análisis completado");
-        loadVotes(); // Recargar votos después del análisis
+        loadVotes();
       } else {
         toast.error(result.message || "Error en análisis");
       }
@@ -57,8 +56,8 @@ const DataProcessing = () => {
     try {
       const result = await electoralApi.cleanNullData();
       toast.success(result.message);
-      await loadVotes(); // ← Recargar tabla
-      await analyzeDataQuality(); // ← Actualizar análisis
+      await loadVotes();
+      await analyzeDataQuality();
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Error limpiando datos");
     } finally {
@@ -71,8 +70,8 @@ const DataProcessing = () => {
     try {
       const result = await electoralApi.removeDuplicates();
       toast.success(result.message);
-      await loadVotes(); // ← Recargar tabla
-      await analyzeDataQuality(); // ← Actualizar análisis
+      await loadVotes();
+      await analyzeDataQuality();
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Error eliminando duplicados");
     } finally {
@@ -85,8 +84,8 @@ const DataProcessing = () => {
     try {
       const result = await electoralApi.normalizeData();
       toast.success(result.message);
-      await loadVotes(); // ← Recargar tabla
-      await analyzeDataQuality(); // ← Actualizar análisis
+      await loadVotes();
+      await analyzeDataQuality();
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Error normalizando");
     } finally {
@@ -94,49 +93,51 @@ const DataProcessing = () => {
     }
   };
 
-  // Filtrar votos por búsqueda
   const filteredVotes = votes.filter(vote =>
     vote.voter_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vote.voter_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    vote.voter_dni?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     vote.voter_location?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Paginación
   const totalPages = Math.ceil(filteredVotes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedVotes = filteredVotes.slice(startIndex, startIndex + itemsPerPage);
 
-  // Detectar problemas en cada voto
+  // Detectar problemas - ACTUALIZADO para incluir DNI
   const getVoteIssues = (vote: any) => {
     const issues = [];
     
-    // Detectar nombre null o vacío
-    if (vote.voter_name === null || vote.voter_name === undefined || 
-        (typeof vote.voter_name === 'string' && vote.voter_name.trim() === '')) {
+    const isNullOrEmpty = (val: any) => {
+      if (val === null || val === undefined) return true;
+      const str = String(val).trim();
+      return str === '' || str.toUpperCase() === 'N/A';
+    };
+    
+    if (isNullOrEmpty(vote.voter_name)) {
       issues.push("Sin nombre");
     }
     
-    // Detectar email null, vacío o inválido
-    if (vote.voter_email === null || vote.voter_email === undefined || 
-        (typeof vote.voter_email === 'string' && vote.voter_email.trim() === '')) {
+    if (isNullOrEmpty(vote.voter_dni)) {
+      issues.push("Sin DNI");
+    }
+    
+    if (isNullOrEmpty(vote.voter_email)) {
       issues.push("Sin email");
-    } else if (typeof vote.voter_email === 'string' && !vote.voter_email.includes("@")) {
+    } else if (!String(vote.voter_email).includes("@")) {
       issues.push("Email inválido");
     }
     
-    // Detectar ubicación null o vacía
-    if (vote.voter_location === null || vote.voter_location === undefined || 
-        (typeof vote.voter_location === 'string' && vote.voter_location.trim() === '')) {
+    if (isNullOrEmpty(vote.voter_location)) {
       issues.push("Sin ubicación");
     }
     
-    // Detectar candidato null
     if (vote.candidate_id === null || vote.candidate_id === undefined) {
       issues.push("Sin candidato");
     }
 
-    // Detectar duplicados (solo si tiene email válido)
-    if (vote.voter_email && typeof vote.voter_email === 'string' && vote.voter_email.trim() !== '') {
+    // Duplicados (solo si tiene email válido)
+    if (vote.voter_email && !isNullOrEmpty(vote.voter_email)) {
       const duplicates = votes.filter(v => v.voter_email === vote.voter_email);
       if (duplicates.length > 1) issues.push("Duplicado");
     }
@@ -144,22 +145,27 @@ const DataProcessing = () => {
     return issues;
   };
   
-  // Función auxiliar para mostrar valores con detección de null
-  const displayValue = (value: any, fieldName: string = '') => {
+  // Mostrar valores - ACTUALIZADO para resaltar 'N/A'
+  const displayValue = (value: any) => {
     if (value === null || value === undefined) {
       return <span className="text-red-600 font-semibold">NULL</span>;
     }
-    if (typeof value === 'string' && value.trim() === '') {
+    const str = String(value).trim();
+    if (str === '') {
       return <span className="text-orange-600 font-semibold">VACÍO</span>;
+    }
+    if (str.toUpperCase() === 'N/A') {
+      return <span className="text-blue-600 font-semibold">N/A</span>;
     }
     return value;
   };
 
   const exportToCSV = () => {
-    const headers = ["ID", "Nombre", "Email", "Ubicación", "Candidato", "Fecha", "Problemas"];
+    const headers = ["ID", "Nombre", "DNI", "Email", "Ubicación", "Candidato", "Fecha", "Problemas"];
     const rows = filteredVotes.map(vote => [
       vote.id,
       vote.voter_name || "N/A",
+      vote.voter_dni || "N/A",
       vote.voter_email || "N/A",
       vote.voter_location || "N/A",
       vote.candidate_id || "N/A",
@@ -190,7 +196,6 @@ const DataProcessing = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Acciones */}
           <div className="grid gap-4 md:grid-cols-4">
             <Button onClick={analyzeDataQuality} disabled={processing} className="gradient-hero">
               {processing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
@@ -198,7 +203,7 @@ const DataProcessing = () => {
             </Button>
             <Button onClick={cleanData} disabled={processing || !dataQuality} variant="outline">
               <RefreshCw className="w-4 h-4 mr-2" />
-              Limpiar Datos Null
+              Reemplazar Null → N/A
             </Button>
             <Button onClick={removeDuplicates} disabled={processing || !dataQuality} variant="outline">
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -210,15 +215,13 @@ const DataProcessing = () => {
             </Button>
           </div>
 
-          {/* Resultados */}
           {dataQuality && dataQuality.success && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Reporte de Calidad de Datos</h3>
-
               <div className="grid gap-4 md:grid-cols-2">
                 <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Total de Registros</span><Badge variant="outline">{dataQuality.total_records}</Badge></div></CardContent></Card>
                 <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Registros Completos</span><Badge className="bg-green-500">{dataQuality.complete_records} ({dataQuality.quality_score}%)</Badge></div></CardContent></Card>
-                <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Datos Faltantes</span><Badge variant={dataQuality.missing_data > 0 ? "destructive" : "outline"}>{dataQuality.missing_data}</Badge></div></CardContent></Card>
+                <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Datos Faltantes/N/A</span><Badge variant={dataQuality.missing_data > 0 ? "destructive" : "outline"}>{dataQuality.missing_data}</Badge></div></CardContent></Card>
                 <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Emails Válidos</span><Badge className="bg-blue-500">{dataQuality.valid_emails}</Badge></div></CardContent></Card>
                 <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Duplicados</span><Badge variant={dataQuality.duplicates > 0 ? "destructive" : "outline"}>{dataQuality.duplicates}</Badge></div></CardContent></Card>
                 <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Outliers</span><Badge variant={dataQuality.outliers > 0 ? "secondary" : "outline"}>{dataQuality.outliers}</Badge></div></CardContent></Card>
@@ -233,7 +236,7 @@ const DataProcessing = () => {
                         Calidad: {dataQuality.quality_score >= 90 ? "Excelente" : dataQuality.quality_score >= 70 ? "Buena" : "Mejorable"}
                       </p>
                       <p className="text-sm text-green-700 dark:text-green-300">
-                        Los datos están listos para el modelo
+                        Registros sin N/A listos para análisis ML
                       </p>
                     </div>
                   </div>
@@ -249,17 +252,17 @@ const DataProcessing = () => {
                 Proceso Real (Pandas + Supabase)
               </h4>
               <ul className="text-sm space-y-1 text-muted-foreground">
-                <li>• Análisis con Pandas/NumPy</li>
-                <li>• Detección de nulos, duplicados, outliers</li>
-                <li>• Normalización de texto en base de datos</li>
-                <li>• Registro de auditoría en tablas: `null_data_votes`, `duplicated_votes`, etc.</li>
+                <li>• Los datos NULL se reemplazan con "N/A" (incluyendo DNI)</li>
+                <li>• Se registra auditoría en tabla null_data_votes</li>
+                <li>• Los registros permanecen en la base de datos</li>
+                <li>• Status visual: OK si no hay NULL, Warning si hay N/A</li>
               </ul>
             </CardContent>
           </Card>
         </CardContent>
       </Card>
 
-      {/* TABLA DE DATOS */}
+      {/* TABLA */}
       <Card className="shadow-elegant">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -269,7 +272,7 @@ const DataProcessing = () => {
                 Datos en Procesamiento
               </CardTitle>
               <CardDescription>
-                {loadingVotes ? "Cargando..." : `Visualiza y analiza los votos registrados (${votes.length} total)`}
+                {loadingVotes ? "Cargando..." : `${votes.length} votos • N/A indica datos reemplazados`}
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -297,13 +300,12 @@ const DataProcessing = () => {
               </div>
             ) : (
               <>
-                {/* Barra de búsqueda y exportar */}
                 <div className="flex gap-4">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                       type="text"
-                      placeholder="Buscar por nombre, email o ubicación..."
+                      placeholder="Buscar por nombre, DNI, email o ubicación..."
                       value={searchTerm}
                       onChange={(e) => {
                         setSearchTerm(e.target.value);
@@ -318,13 +320,13 @@ const DataProcessing = () => {
                   </Button>
                 </div>
 
-                {/* Tabla */}
                 <div className="overflow-x-auto rounded-lg border">
                   <table className="w-full text-sm">
                     <thead className="bg-muted">
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold">ID</th>
                         <th className="px-4 py-3 text-left font-semibold">Nombre</th>
+                        <th className="px-4 py-3 text-left font-semibold">DNI</th>
                         <th className="px-4 py-3 text-left font-semibold">Email</th>
                         <th className="px-4 py-3 text-left font-semibold">Ubicación</th>
                         <th className="px-4 py-3 text-left font-semibold">Candidato</th>
@@ -340,9 +342,10 @@ const DataProcessing = () => {
                         return (
                           <tr key={vote.id} className={`hover:bg-muted/50 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
                             <td className="px-4 py-3 font-mono text-xs">{vote.id}</td>
-                            <td className="px-4 py-3">{vote.voter_name || <span className="text-red-500">Null</span>}</td>
-                            <td className="px-4 py-3">{vote.voter_email || <span className="text-red-500">Null</span>}</td>
-                            <td className="px-4 py-3">{vote.voter_location || <span className="text-yellow-500">Sin ubicación</span>}</td>
+                            <td className="px-4 py-3">{displayValue(vote.voter_name)}</td>
+                            <td className="px-4 py-3 font-mono">{displayValue(vote.voter_dni)}</td>
+                            <td className="px-4 py-3">{displayValue(vote.voter_email)}</td>
+                            <td className="px-4 py-3">{displayValue(vote.voter_location)}</td>
                             <td className="px-4 py-3 font-mono text-xs">{vote.candidate_id || "N/A"}</td>
                             <td className="px-4 py-3 text-xs">{new Date(vote.voted_at).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })}</td>
                             <td className="px-4 py-3">
@@ -368,7 +371,6 @@ const DataProcessing = () => {
                   </table>
                 </div>
 
-                {/* Paginación */}
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
                     Mostrando {startIndex + 1} - {Math.min(startIndex + itemsPerPage, filteredVotes.length)} de {filteredVotes.length} votos
@@ -396,13 +398,34 @@ const DataProcessing = () => {
                   </div>
                 </div>
 
-                {/* Estadísticas rápidas */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
                   <Card>
                     <CardContent className="p-3">
-                      <p className="text-xs text-muted-foreground">Votos sin problemas</p>
+                      <p className="text-xs text-muted-foreground">Votos OK</p>
                       <p className="text-2xl font-bold text-green-600">
                         {votes.filter(v => getVoteIssues(v).length === 0).length}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">Con N/A</p>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {votes.filter(v => {
+                          const str = (val: any) => String(val || '').trim().toUpperCase();
+                          return str(v.voter_name) === 'N/A' || 
+                                 str(v.voter_dni) === 'N/A' || 
+                                 str(v.voter_email) === 'N/A' || 
+                                 str(v.voter_location) === 'N/A';
+                        }).length}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-3">
+                      <p className="text-xs text-muted-foreground">Duplicados</p>
+                      <p className="text-2xl font-bold text-yellow-600">
+                        {votes.length - new Set(votes.map(v => v.voter_email)).size}
                       </p>
                     </CardContent>
                   </Card>
@@ -411,22 +434,6 @@ const DataProcessing = () => {
                       <p className="text-xs text-muted-foreground">Con problemas</p>
                       <p className="text-2xl font-bold text-red-600">
                         {votes.filter(v => getVoteIssues(v).length > 0).length}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-3">
-                      <p className="text-xs text-muted-foreground">Emails duplicados</p>
-                      <p className="text-2xl font-bold text-yellow-600">
-                        {votes.length - new Set(votes.map(v => v.voter_email)).size}
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-3">
-                      <p className="text-xs text-muted-foreground">Sin ubicación</p>
-                      <p className="text-2xl font-bold text-orange-600">
-                        {votes.filter(v => !v.voter_location).length}
                       </p>
                     </CardContent>
                   </Card>

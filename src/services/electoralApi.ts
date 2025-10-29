@@ -42,6 +42,30 @@ class ElectoralApiService {
     const response = await axios.get(`${API_URL}/candidates`);
     return response.data;
   }
+  async analyzeDataQuality() {
+    const res = await axios.get(`${API_URL}/analyze`);
+    return res.data;
+  }
+
+  async cleanNullData() {
+    const res = await axios.post(`${API_URL}/clean-null`);
+    return res.data;
+  }
+
+  async removeDuplicates() {
+    const res = await axios.post(`${API_URL}/remove-duplicates`);
+    return res.data;
+  }
+
+  async normalizeData() {
+    const res = await axios.post(`${API_URL}/normalize`);
+    return res.data;
+  }
+  async getAllVotes() {
+    const response = await axios.get(`${API_URL}/votes`);
+    return response.data;
+  }
+
 }
 
 export const electoralApi = new ElectoralApiService();

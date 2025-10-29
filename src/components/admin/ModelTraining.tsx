@@ -3,35 +3,51 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Brain, Play, CheckCircle, TrendingUp, Loader2, Trash2, AlertCircle } from "lucide-react";
+import { Brain, Play, CheckCircle, TrendingUp, Loader2, Trash2, AlertCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { electoralApi } from "@/services/electoralApi";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-interface ModelTrainingProps {
-  votes: any[];
-  candidates: any[];
-}
-
-const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
+const ModelTraining = () => {
   const [training, setTraining] = useState(false);
   const [progress, setProgress] = useState(0);
   const [modelMetrics, setModelMetrics] = useState<any>(null);
   const [trainingHistory, setTrainingHistory] = useState<any[]>([]);
   const [models, setModels] = useState<any[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
-  
-  // Configuración de entrenamiento
+  const [loadingData, setLoadingData] = useState(true);
+
+  // Datos desde API
+  const [votes, setVotes] = useState<any[]>([]);
+  const [candidates, setCandidates] = useState<any[]>([]);
+
+  // Configuración
   const [modelType, setModelType] = useState<'classification' | 'regression'>('classification');
   const [algorithm, setAlgorithm] = useState('random_forest');
   const [selectedModelId, setSelectedModelId] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadModels();
-  }, []);
+  // CARGAR DATOS LIMPIOS
+  const loadData = async () => {
+    setLoadingData(true);
+    try {
+      const [votesRes, candidatesRes] = await Promise.all([
+        electoralApi.getAllVotes(),
+        electoralApi.getCandidates()
+      ]);
+      setVotes(votesRes || []);
+      setCandidates(candidatesRes || []);
+      toast.success("Datos limpios cargados para ML");
+    } catch (err: any) {
+      toast.error("Error cargando datos para entrenamiento");
+      console.error(err);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
+  // CARGAR MODELOS
   const loadModels = async () => {
     try {
       setLoadingModels(true);
@@ -46,9 +62,21 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
     }
   };
 
+  // INICIAR CARGA
+  useEffect(() => {
+    loadData();
+    loadModels();
+  }, []);
+
+  // ENTRENAR
   const trainModel = async () => {
-    if (votes.length < 10) {
-      toast.error("Se necesitan al menos 10 votos válidos para entrenar");
+    const validVotes = votes.filter(v =>
+      v.voter_dni && String(v.voter_dni).trim() !== '' &&
+      v.candidate_id && v.voted_at
+    );
+
+    if (validVotes.length < 10) {
+      toast.error(`Solo ${validVotes.length} votos válidos (DNI + candidato + fecha). Mínimo 10.`);
       return;
     }
 
@@ -57,7 +85,6 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
     setModelMetrics(null);
     setTrainingHistory([]);
 
-    // Simular progreso
     const progressInterval = setInterval(() => {
       setProgress((prev) => Math.min(prev + 5, 95));
     }, 300);
@@ -66,7 +93,7 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
       const result = await electoralApi.trainModel({
         model_type: modelType,
         algorithm: algorithm,
-        test_size: 0.2,
+        test_size: validVotes.length < 20 ? 0.1 : 0.2,
         random_state: 42
       });
 
@@ -76,29 +103,26 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
       if (result.success) {
         setModelMetrics(result.metrics);
         setSelectedModelId(result.model_id);
-        
-        // Cargar historial
+
         const historyResult = await electoralApi.getTrainingHistory(result.model_id);
         if (historyResult.success && historyResult.history) {
           setTrainingHistory(historyResult.history);
         }
 
-        // Recargar lista de modelos
         await loadModels();
-
-        toast.success(`Modelo entrenado exitosamente (${result.training_time.toFixed(2)}s)`);
+        toast.success(`Modelo entrenado con ${result.training_samples} muestras (${result.training_time?.toFixed(2)}s)`);
       } else {
         toast.error(result.error || "Error en entrenamiento");
       }
     } catch (error: any) {
       clearInterval(progressInterval);
-      console.error("Error entrenando modelo:", error);
       toast.error(error.response?.data?.detail || "Error al entrenar modelo");
     } finally {
       setTraining(false);
     }
   };
 
+  // CARGAR DETALLES
   const loadModelDetails = async (modelId: number) => {
     try {
       const [metricsResult, historyResult] = await Promise.all([
@@ -107,7 +131,6 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
       ]);
 
       if (metricsResult) {
-        // Parsear JSONs
         const metrics = {
           accuracy: metricsResult.accuracy,
           precision: metricsResult.precision_score,
@@ -126,14 +149,13 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
 
       setSelectedModelId(modelId);
     } catch (error: any) {
-      console.error("Error cargando detalles:", error);
       toast.error("Error al cargar detalles del modelo");
     }
   };
 
+  // ELIMINAR
   const deleteModel = async (modelId: number) => {
-    if (!confirm("¿Estás seguro de eliminar este modelo?")) return;
-
+    if (!confirm("¿Eliminar este modelo?")) return;
     try {
       const result = await electoralApi.deleteModel(modelId);
       if (result.success) {
@@ -145,8 +167,8 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
           setTrainingHistory([]);
         }
       }
-    } catch (error: any) {
-      toast.error("Error al eliminar modelo");
+    } catch {
+      toast.error("Error al eliminar");
     }
   };
 
@@ -163,51 +185,73 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
     ]
   };
 
+  const validVotesCount = votes.filter(v =>
+    v.voter_dni && String(v.voter_dni).trim() !== '' &&
+    v.candidate_id && v.voted_at
+  ).length;
+
   return (
     <div className="space-y-6">
       <Card className="shadow-elegant">
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <Brain className="w-6 h-6" />
-            Entrenamiento de Modelo ML
-          </CardTitle>
-          <CardDescription>
-            Entrenamiento real con Scikit-learn • Datos: {votes.length} votos
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <Brain className="w-6 h-6" />
+                Entrenamiento de Modelo ML
+              </CardTitle>
+              <CardDescription>
+                Scikit-learn en tiempo real • {loadingData ? "Cargando..." : `${validVotesCount} votos válidos`}
+              </CardDescription>
+            </div>
+            <Button onClick={loadData} disabled={loadingData} variant="outline" size="sm">
+              <RefreshCw className={`w-4 h-4 mr-2 ${loadingData ? 'animate-spin' : ''}`} />
+              Recargar Datos
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Configuración del Modelo */}
+
+          {/* ESTADO DE DATOS */}
+          <div className="flex items-center gap-2 text-sm">
+            {loadingData ? (
+              <Badge variant="secondary"><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Cargando datos...</Badge>
+            ) : validVotesCount >= 10 ? (
+              <Badge className="bg-green-500">Listo: {validVotesCount} votos válidos</Badge>
+            ) : (
+              <Badge variant="destructive">Solo {validVotesCount} válidos (mínimo 10)</Badge>
+            )}
+          </div>
+
+          {/* CONFIGURACIÓN */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Configuración del Modelo</h3>
-            
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="model-type">Tipo de Modelo</Label>
+                <Label>Tipo de Modelo</Label>
                 <Select value={modelType} onValueChange={(val: any) => {
                   setModelType(val);
                   setAlgorithm(val === 'classification' ? 'random_forest' : 'linear_regression');
                 }}>
-                  <SelectTrigger id="model-type">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="classification">Clasificación (Predice Candidato)</SelectItem>
-                    <SelectItem value="regression">Regresión (Predice Votos)</SelectItem>
+                    <SelectItem value="classification">Clasificación (Candidato)</SelectItem>
+                    <SelectItem value="regression">Regresión (Votos)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="algorithm">Algoritmo</Label>
+                <Label>Algoritmo</Label>
                 <Select value={algorithm} onValueChange={setAlgorithm}>
-                  <SelectTrigger id="algorithm">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {algorithmOptions[modelType].map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
+                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -217,77 +261,53 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
             <div className="grid gap-4 md:grid-cols-3">
               <Card>
                 <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <span className="text-sm text-muted-foreground">Datos Disponibles</span>
-                    <p className="font-semibold">{votes.length} votos</p>
-                  </div>
+                  <span className="text-sm text-muted-foreground">Votos Válidos</span>
+                  <p className="font-semibold">{validVotesCount}</p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <span className="text-sm text-muted-foreground">Features</span>
-                    <p className="font-semibold">Hora, Día, Ubicación</p>
-                  </div>
+                  <span className="text-sm text-muted-foreground">Features</span>
+                  <p className="font-semibold">Hora, Día, Ubicación</p>
                 </CardContent>
               </Card>
-
               <Card>
                 <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <span className="text-sm text-muted-foreground">Clases</span>
-                    <p className="font-semibold">{candidates.length} candidatos</p>
-                  </div>
+                  <span className="text-sm text-muted-foreground">Candidatos</span>
+                  <p className="font-semibold">{candidates.length}</p>
                 </CardContent>
               </Card>
             </div>
           </div>
 
-          {/* Botón de Entrenamiento */}
+          {/* BOTÓN ENTRENAR */}
           <Button
             onClick={trainModel}
-            disabled={training || votes.length < 10}
+            disabled={training || validVotesCount < 10}
             className="w-full gradient-hero shadow-glow"
             size="lg"
           >
             {training ? (
               <>
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Entrenando Modelo... {progress}%
+                Entrenando... {progress}%
               </>
             ) : (
               <>
                 <Play className="w-5 h-5 mr-2" />
-                Iniciar Entrenamiento Real
+                Iniciar Entrenamiento
               </>
             )}
           </Button>
 
-          {votes.length < 10 && (
-            <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-yellow-600" />
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                    Se necesitan al menos 10 votos válidos para entrenar el modelo
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Barra de Progreso */}
           {training && (
             <div className="space-y-2">
               <Progress value={progress} className="w-full" />
-              <p className="text-sm text-center text-muted-foreground">
-                Entrenando con Scikit-learn...
-              </p>
+              <p className="text-sm text-center text-muted-foreground">Entrenando con Scikit-learn...</p>
             </div>
           )}
 
-          {/* Modelos Guardados */}
+          {/* MODELOS GUARDADOS */}
           {models.length > 0 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Modelos Entrenados ({models.length})</h3>
@@ -296,9 +316,7 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
                   <Card
                     key={model.id}
                     className={`cursor-pointer transition-all ${
-                      selectedModelId === model.id
-                        ? 'border-blue-500 shadow-lg'
-                        : 'hover:border-blue-300'
+                      selectedModelId === model.id ? 'border-blue-500 shadow-lg' : 'hover:border-blue-300'
                     }`}
                     onClick={() => loadModelDetails(model.id)}
                   >
@@ -310,7 +328,7 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
                             {model.is_active && <Badge className="bg-green-500">Activo</Badge>}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {model.algorithm} • {model.training_data_size} samples • v{model.version}
+                            {model.algorithm} • {model.training_data_size} muestras • v{model.version}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             {new Date(model.created_at).toLocaleString()}
@@ -335,7 +353,7 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
             </div>
           )}
 
-          {/* Métricas del Modelo */}
+          {/* MÉTRICAS */}
           {modelMetrics && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -354,32 +372,18 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <p className="text-sm text-muted-foreground">Precision</p>
-                    <p className="text-3xl font-bold">
-                      {modelMetrics.precision ? (modelMetrics.precision * 100).toFixed(2) : 'N/A'}%
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <p className="text-sm text-muted-foreground">Recall</p>
-                    <p className="text-3xl font-bold">
-                      {modelMetrics.recall ? (modelMetrics.recall * 100).toFixed(2) : 'N/A'}%
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <p className="text-sm text-muted-foreground">F1-Score</p>
-                    <p className="text-3xl font-bold">
-                      {modelMetrics.f1Score ? (modelMetrics.f1Score * 100).toFixed(2) : 'N/A'}%
-                    </p>
-                  </CardContent>
-                </Card>
+                {['precision', 'recall', 'f1Score'].map(key => (
+                  <Card key={key}>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        {key === 'precision' ? 'Precision' : key === 'recall' ? 'Recall' : 'F1-Score'}
+                      </p>
+                      <p className="text-3xl font-bold">
+                        {modelMetrics[key] ? (modelMetrics[key] * 100).toFixed(2) : 'N/A'}%
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
 
                 {modelMetrics.loss !== undefined && (
                   <Card>
@@ -389,32 +393,20 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
                     </CardContent>
                   </Card>
                 )}
-
-                {modelMetrics.r2_score !== undefined && (
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-sm text-muted-foreground">R² Score</p>
-                      <p className="text-3xl font-bold">{modelMetrics.r2_score.toFixed(4)}</p>
-                    </CardContent>
-                  </Card>
-                )}
               </div>
 
-              {/* Feature Importance */}
               {modelMetrics.feature_importance && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Importancia de Features</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle>Importancia de Features</CardTitle></CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {Object.entries(modelMetrics.feature_importance).map(([feature, importance]: any) => (
-                        <div key={feature} className="space-y-1">
+                      {Object.entries(modelMetrics.feature_importance).map(([f, i]: any) => (
+                        <div key={f} className="space-y-1">
                           <div className="flex justify-between text-sm">
-                            <span className="font-medium">{feature}</span>
-                            <span className="text-muted-foreground">{(importance * 100).toFixed(1)}%</span>
+                            <span className="font-medium">{f}</span>
+                            <span className="text-muted-foreground">{(i * 100).toFixed(1)}%</span>
                           </div>
-                          <Progress value={importance * 100} className="h-2" />
+                          <Progress value={i * 100} className="h-2" />
                         </div>
                       ))}
                     </div>
@@ -422,7 +414,6 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
                 </Card>
               )}
 
-              {/* Gráfico de Entrenamiento */}
               {trainingHistory.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -437,20 +428,8 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Line 
-                          type="monotone" 
-                          dataKey="loss" 
-                          stroke="hsl(0, 75%, 55%)" 
-                          name="Loss" 
-                          strokeWidth={2}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="accuracy" 
-                          stroke="hsl(200, 95%, 45%)" 
-                          name="Accuracy" 
-                          strokeWidth={2}
-                        />
+                        <Line type="monotone" dataKey="loss" stroke="hsl(0, 75%, 55%)" name="Loss" strokeWidth={2} />
+                        <Line type="monotone" dataKey="accuracy" stroke="hsl(200, 95%, 45%)" name="Accuracy" strokeWidth={2} />
                       </LineChart>
                     </ResponsiveContainer>
                   </CardContent>
@@ -459,19 +438,17 @@ const ModelTraining = ({ votes, candidates }: ModelTrainingProps) => {
             </div>
           )}
 
-          {/* Información Técnica */}
           <Card className="bg-muted">
             <CardContent className="p-4">
-              <h4 className="font-semibold mb-2">Frameworks Utilizados</h4>
+              <h4 className="font-semibold mb-2">Frameworks</h4>
               <div className="flex flex-wrap gap-2 mb-3">
                 <Badge>Scikit-learn</Badge>
-                <Badge>NumPy</Badge>
                 <Badge>Pandas</Badge>
                 <Badge>FastAPI</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                Los modelos se entrenan con datos reales de la tabla <code className="bg-background px-1 rounded">votes</code>.
-                Se utilizan features como hora de votación, día de la semana y ubicación geográfica codificada.
+                Usa datos limpios de <code className="bg-background px-1 rounded">votes</code>. 
+                Filtro: DNI + candidato + fecha.
               </p>
             </CardContent>
           </Card>

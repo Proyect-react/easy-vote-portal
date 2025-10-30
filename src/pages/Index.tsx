@@ -49,7 +49,9 @@ export default function ElectoralForm() {
   const [provincia, setProvincia] = useState("");
   const [distrito, setDistrito] = useState("");
   const [email, setEmail] = useState("");
-
+  const [edad, setEdad] = useState("");
+  const [genero, setGenero] = useState("");
+  const [educacion, setEducacion] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -101,6 +103,19 @@ export default function ElectoralForm() {
       toast.error("Ingrese un correo electrónico válido");
       return;
     }
+    if (!selectedCandidate || !nombre || !apellido || !dni || !celular ||
+      !departamento || !provincia || !distrito || !email ||
+      !edad || !genero || !educacion) {  // ← AGREGAR ESTO
+      toast.error("Por favor complete todos los campos requeridos");
+      return;
+    }
+
+    // Validar edad
+    const edadNum = parseInt(edad);
+    if (edadNum < 18 || edadNum > 99) {
+      toast.error("La edad debe estar entre 18 y 99 años");
+      return;
+    }
 
     setLoading(true);
 
@@ -121,7 +136,10 @@ export default function ElectoralForm() {
         departamento,
         provincia,
         distrito,
-        candidate_id: selectedCandidate
+        edad: parseInt(edad),        // ← AGREGAR
+        genero,                       // ← AGREGAR
+        educacion,                    // ← AGREGAR
+        candidate_id: parseInt(selectedCandidate)
       });
 
       setSubmitted(true);
@@ -315,6 +333,80 @@ export default function ElectoralForm() {
                   <div className="space-y-2 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
                     <Label htmlFor="celular" className="text-base text-blue-100">Número de Celular *</Label>
                     <Input id="celular" value={celular} onChange={(e) => setCelular(e.target.value.replace(/\D/g, '').slice(0, 9))} required placeholder="Ej: 987654321" maxLength={9} className="h-12 glass-effect border-2 border-blue-400 focus:border-blue-300 focus:ring-blue-300 text-white placeholder:text-blue-200 transition-all duration-300 hover:shadow-blue-500/50 hover:shadow-lg" />
+                  </div>
+                </div>
+                {/* === NUEVOS CAMPOS DEMOGRÁFICOS === */}
+                <div className="border-t-2 border-blue-400 pt-8 mt-8"></div>
+
+                <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-10 h-10 rounded-full metallic-blue flex items-center justify-center text-white font-bold shadow-2xl animate-glow-pulse">
+                      📊
+                    </div>
+                    <h3 className="text-xl font-bold text-white drop-shadow-lg">Información Demográfica</h3>
+                  </div>
+
+                  <div className="grid gap-6 md:grid-cols-3">
+                    {/* EDAD */}
+                    <div className="space-y-2 animate-fade-in-up" style={{ animationDelay: "0.6s" }}>
+                      <Label htmlFor="edad" className="text-base text-blue-100">Edad *</Label>
+                      <Input
+                        id="edad"
+                        type="number"
+                        value={edad}
+                        onChange={(e) => setEdad(e.target.value)}
+                        required
+                        min="18"
+                        max="99"
+                        placeholder="Ej: 28"
+                        className="h-12 glass-effect border-2 border-blue-400 focus:border-blue-300 focus:ring-blue-300 text-white placeholder:text-blue-200 transition-all duration-300 hover:shadow-blue-500/50 hover:shadow-lg"
+                      />
+                    </div>
+
+                    {/* GÉNERO */}
+                    <div className="space-y-2 animate-fade-in-up" style={{ animationDelay: "0.7s" }}>
+                      <Label htmlFor="genero" className="text-base text-blue-100">Género *</Label>
+                      <Select value={genero} onValueChange={setGenero} required>
+                        <SelectTrigger className="h-12 glass-effect border-2 border-blue-400 focus:border-blue-300 focus:ring-blue-300 text-white transition-all duration-300 hover:shadow-blue-500/50 hover:shadow-lg">
+                          <SelectValue placeholder="Seleccione su género" className="text-blue-200" />
+                        </SelectTrigger>
+                        <SelectContent className="glass-effect border-2 border-blue-400 bg-slate-800/95">
+                          <SelectItem value="Masculino" className="text-white hover:bg-blue-500/30 focus:bg-blue-500/30 cursor-pointer">
+                            Masculino
+                          </SelectItem>
+                          <SelectItem value="Femenino" className="text-white hover:bg-blue-500/30 focus:bg-blue-500/30 cursor-pointer">
+                            Femenino
+                          </SelectItem>
+                          <SelectItem value="Otro" className="text-white hover:bg-blue-500/30 focus:bg-blue-500/30 cursor-pointer">
+                            Otro
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* EDUCACIÓN */}
+                    <div className="space-y-2 animate-fade-in-up" style={{ animationDelay: "0.8s" }}>
+                      <Label htmlFor="educacion" className="text-base text-blue-100">Nivel Educativo *</Label>
+                      <Select value={educacion} onValueChange={setEducacion} required>
+                        <SelectTrigger className="h-12 glass-effect border-2 border-blue-400 focus:border-blue-300 focus:ring-blue-300 text-white transition-all duration-300 hover:shadow-blue-500/50 hover:shadow-lg">
+                          <SelectValue placeholder="Seleccione su nivel educativo" className="text-blue-200" />
+                        </SelectTrigger>
+                        <SelectContent className="glass-effect border-2 border-blue-400 bg-slate-800/95">
+                          <SelectItem value="Primaria" className="text-white hover:bg-blue-500/30 focus:bg-blue-500/30 cursor-pointer">
+                            Primaria Completa
+                          </SelectItem>
+                          <SelectItem value="Secundaria" className="text-white hover:bg-blue-500/30 focus:bg-blue-500/30 cursor-pointer">
+                            Secundaria Completa
+                          </SelectItem>
+                          <SelectItem value="Universidad" className="text-white hover:bg-blue-500/30 focus:bg-blue-500/30 cursor-pointer">
+                            Universidad (en curso o completa)
+                          </SelectItem>
+                          <SelectItem value="Posgrado" className="text-white hover:bg-blue-500/30 focus:bg-blue-500/30 cursor-pointer">
+                            Posgrado (Maestría/Doctorado)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 

@@ -326,6 +326,9 @@ const DataProcessing = () => {
                       <tr>
                         <th className="px-4 py-3 text-left font-semibold">ID</th>
                         <th className="px-4 py-3 text-left font-semibold">Nombre</th>
+                        <th className="px-4 py-3 text-left font-semibold">Edad</th>
+                        <th className="px-4 py-3 text-left font-semibold">Genero</th>
+                        <th className="px-4 py-3 text-left font-semibold">Educacion</th>
                         <th className="px-4 py-3 text-left font-semibold">DNI</th>
                         <th className="px-4 py-3 text-left font-semibold">Email</th>
                         <th className="px-4 py-3 text-left font-semibold">Ubicación</th>
@@ -343,6 +346,9 @@ const DataProcessing = () => {
                           <tr key={vote.id} className={`hover:bg-muted/50 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}`}>
                             <td className="px-4 py-3 font-mono text-xs">{vote.id}</td>
                             <td className="px-4 py-3">{displayValue(vote.voter_name)}</td>
+                            <td className="px-4 py-3">{displayValue(vote.voter_edad)}</td>
+                            <td className="px-4 py-3">{displayValue(vote.voter_genero)}</td>
+                            <td className="px-4 py-3">{displayValue(vote.voter_educacion)}</td>
                             <td className="px-4 py-3 font-mono">{displayValue(vote.voter_dni)}</td>
                             <td className="px-4 py-3">{displayValue(vote.voter_email)}</td>
                             <td className="px-4 py-3">{displayValue(vote.voter_location)}</td>

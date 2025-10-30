@@ -205,13 +205,6 @@ const ResultsView = () => {
                         <span className="text-base font-bold text-blue-950">#{index + 1}</span>
                       </div>
                     </div>
-
-                    <div className="flex gap-2 mt-6">
-                      <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-50 text-blue-700/90 border border-blue-100 font-semibold rounded-lg hover:bg-blue-100 hover:scale-[1.03] transition-all duration-150 shadow">
-                        <Eye size={16} />
-                        Ver Detalles
-                      </button>
-                    </div>
                   </CardContent>
                 </Card>
               ))}

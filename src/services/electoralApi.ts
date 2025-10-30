@@ -14,7 +14,10 @@ export interface VoteData {
   departamento: string;
   provincia: string;
   distrito: string;
-  candidate_id: string;
+  edad: number;          // ← AGREGAR
+  genero: string;        // ← AGREGAR
+  educacion: string;     // ← AGREGAR
+  candidate_id: number;
 }
 
 export interface TrainModelRequest {

@@ -332,19 +332,6 @@ const ModelTraining = () => {
     }
   };
 
-  const algorithmOptions = {
-    classification: [
-      { value: 'random_forest', label: 'Random Forest' },
-      { value: 'logistic_regression', label: 'Logistic Regression' },
-      { value: 'gradient_boosting', label: 'Gradient Boosting' }
-    ],
-    regression: [
-      { value: 'linear_regression', label: 'Linear Regression' },
-      { value: 'ridge', label: 'Ridge Regression' },
-      { value: 'lasso', label: 'Lasso Regression' }
-    ]
-  };
-
   const validVotesCount = votes.filter(v =>
     v.voter_dni && String(v.voter_dni).trim() !== '' &&
     v.candidate_id && v.voted_at
@@ -397,10 +384,15 @@ const ModelTraining = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="classification">Clasificación (Candidato)</SelectItem>
-                    <SelectItem value="regression">Regresión (Votos)</SelectItem>
+                    <SelectItem value="classification">Clasificación (Predicción de Candidato Ganador)</SelectItem>
+                    <SelectItem value="regression">Regresión (% de Votos por Candidato)</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  {modelType === 'classification'
+                    ? 'Predice qué candidato ganará en un perfil demográfico'
+                    : 'Predice qué % de votos obtendrá cada candidato en un segmento'}
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -410,11 +402,28 @@ const ModelTraining = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {algorithmOptions[modelType].map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
+                    {modelType === 'classification' ? (
+                      <>
+                        <SelectItem value="random_forest">Random Forest</SelectItem>
+                        <SelectItem value="logistic_regression">Logistic Regression</SelectItem>
+                        <SelectItem value="gradient_boosting">Gradient Boosting</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="linear_regression">Linear Regression</SelectItem>
+                        <SelectItem value="ridge">Ridge Regression</SelectItem>
+                        <SelectItem value="lasso">Lasso Regression</SelectItem>
+                        <SelectItem value="random_forest">Random Forest Regressor</SelectItem>
+                        <SelectItem value="gradient_boosting">Gradient Boosting Regressor</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  {modelType === 'classification'
+                    ? 'Predice el candidato ganador'
+                    : 'Predice el % de votos por candidato'}
+                </p>
               </div>
             </div>
 
@@ -428,7 +437,7 @@ const ModelTraining = () => {
               <Card>
                 <CardContent className="p-4">
                   <span className="text-sm text-muted-foreground">Features</span>
-                  <p className="font-semibold">Hora, Día, Ubicación</p>
+                  <p className="font-semibold">Edad, Educacion, Genero</p>
                 </CardContent>
               </Card>
               <Card>
@@ -521,7 +530,7 @@ const ModelTraining = () => {
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {/* ACCURACY - Solo para Clasificación */}
+                {/* === MÉTRICAS DE CLASIFICACIÓN === */}
                 {modelMetrics.accuracy !== null && modelMetrics.accuracy !== undefined && (
                   <Card className="border-green-200 bg-green-50 dark:bg-green-950">
                     <CardContent className="p-4 text-center">
@@ -534,19 +543,17 @@ const ModelTraining = () => {
                   </Card>
                 )}
 
-                {/* PRECISION - Solo para Clasificación */}
-                {modelMetrics.precision !== null && modelMetrics.precision !== undefined && (
+                {modelMetrics.precision_score !== null && modelMetrics.precision_score !== undefined && (
                   <Card>
                     <CardContent className="p-4 text-center">
                       <p className="text-sm text-muted-foreground">Precision</p>
                       <p className="text-3xl font-bold">
-                        {(modelMetrics.precision * 100).toFixed(2)}%
+                        {(modelMetrics.precision_score * 100).toFixed(2)}%
                       </p>
                     </CardContent>
                   </Card>
                 )}
 
-                {/* RECALL - Solo para Clasificación */}
                 {modelMetrics.recall !== null && modelMetrics.recall !== undefined && (
                   <Card>
                     <CardContent className="p-4 text-center">
@@ -558,63 +565,49 @@ const ModelTraining = () => {
                   </Card>
                 )}
 
-                {/* F1-SCORE - Solo para Clasificación */}
-                {modelMetrics.f1Score !== null && modelMetrics.f1Score !== undefined && (
+                {modelMetrics.f1_score !== null && modelMetrics.f1_score !== undefined && (
                   <Card>
                     <CardContent className="p-4 text-center">
                       <p className="text-sm text-muted-foreground">F1-Score</p>
                       <p className="text-3xl font-bold">
-                        {(modelMetrics.f1Score * 100).toFixed(2)}%
+                        {(modelMetrics.f1_score * 100).toFixed(2)}%
                       </p>
                     </CardContent>
                   </Card>
                 )}
 
-                {/* MSE - Solo para Regresión */}
+                {/* === MÉTRICAS DE REGRESIÓN === */}
                 {modelMetrics.loss !== null && modelMetrics.loss !== undefined && (
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-sm text-muted-foreground">MSE</p>
-                      <p className="text-3xl font-bold">{modelMetrics.loss.toFixed(4)}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* RMSE - Solo para Regresión */}
-                {modelMetrics.rmse !== null && modelMetrics.rmse !== undefined && (
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-sm text-muted-foreground">RMSE</p>
-                      <p className="text-3xl font-bold">{modelMetrics.rmse.toFixed(4)}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* MAE - Solo para Regresión */}
-                {modelMetrics.mae !== null && modelMetrics.mae !== undefined && (
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <p className="text-sm text-muted-foreground">MAE</p>
-                      <p className="text-3xl font-bold">{modelMetrics.mae.toFixed(4)}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* R2 Score - Solo para Regresión */}
-                {modelMetrics.r2_score !== null && modelMetrics.r2_score !== undefined && (
                   <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">
                     <CardContent className="p-4 text-center">
                       <TrendingUp className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                      <p className="text-sm text-muted-foreground">R² Score</p>
+                      <p className="text-sm text-muted-foreground">MSE (normalizado)</p>
                       <p className="text-3xl font-bold text-blue-600">
-                        {modelMetrics.r2_score.toFixed(4)}
+                        {modelMetrics.loss.toFixed(4)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Menor es mejor
                       </p>
                     </CardContent>
                   </Card>
                 )}
               </div>
 
-              {/* FEATURE IMPORTANCE */}
+              {/* CONFUSION MATRIX solo para clasificación */}
+              {modelMetrics.confusion_matrix && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Matriz de Confusión</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      Muestra cómo el modelo clasifica cada candidato
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* FEATURE IMPORTANCE (ambos tipos) */}
               {modelMetrics.feature_importance && (
                 <Card>
                   <CardHeader>
@@ -622,13 +615,13 @@ const ModelTraining = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {Object.entries(modelMetrics.feature_importance).map(([f, i]: any) => (
-                        <div key={f} className="space-y-1">
+                      {Object.entries(JSON.parse(modelMetrics.feature_importance)).map(([feature, importance]: [string, any]) => (
+                        <div key={feature} className="space-y-1">
                           <div className="flex justify-between text-sm">
-                            <span className="font-medium">{f}</span>
-                            <span className="text-muted-foreground">{(i * 100).toFixed(1)}%</span>
+                            <span className="font-medium capitalize">{feature.replace('_', ' ')}</span>
+                            <span className="text-muted-foreground">{(importance * 100).toFixed(1)}%</span>
                           </div>
-                          <Progress value={i * 100} className="h-2" />
+                          <Progress value={importance * 100} className="h-2" />
                         </div>
                       ))}
                     </div>
@@ -636,7 +629,7 @@ const ModelTraining = () => {
                 </Card>
               )}
 
-              {/* HISTORIAL */}
+              {/* HISTORIAL DE ENTRENAMIENTO */}
               {trainingHistory.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -651,13 +644,60 @@ const ModelTraining = () => {
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Line type="monotone" dataKey="loss" stroke="hsl(0, 75%, 55%)" name="Loss" strokeWidth={2} />
-                        <Line type="monotone" dataKey="accuracy" stroke="hsl(200, 95%, 45%)" name="Accuracy" strokeWidth={2} />
+                        <Line
+                          type="monotone"
+                          dataKey="loss"
+                          stroke="hsl(0, 75%, 55%)"
+                          name="Loss"
+                          strokeWidth={2}
+                        />
+                        {trainingHistory[0]?.accuracy !== null && (
+                          <Line
+                            type="monotone"
+                            dataKey="accuracy"
+                            stroke="hsl(200, 95%, 45%)"
+                            name="Accuracy"
+                            strokeWidth={2}
+                          />
+                        )}
                       </LineChart>
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
               )}
+
+              {/* INFORMACIÓN ADICIONAL */}
+              <Card className="bg-muted">
+                <CardContent className="p-4">
+                  <h4 className="font-semibold mb-2">Información del Modelo</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Tipo:</span>
+                      <span className="ml-2 font-medium capitalize">
+                        {selectedModelId && models.find(m => m.id === selectedModelId)?.model_type}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Algoritmo:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedModelId && models.find(m => m.id === selectedModelId)?.algorithm}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Features:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedModelId && models.find(m => m.id === selectedModelId)?.feature_columns?.join(', ')}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Target:</span>
+                      <span className="ml-2 font-medium">
+                        {selectedModelId && models.find(m => m.id === selectedModelId)?.target_column}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 

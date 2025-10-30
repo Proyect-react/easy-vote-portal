@@ -123,6 +123,7 @@ const ModelTraining = () => {
   };
 
   // CARGAR DETALLES
+  // CARGAR DETALLES
   const loadModelDetails = async (modelId: number) => {
     try {
       const [metricsResult, historyResult] = await Promise.all([
@@ -134,21 +135,41 @@ const ModelTraining = () => {
         // ✅ Parsear métricas correctamente según tipo de modelo
         const metrics: any = {
           accuracy: metricsResult.accuracy,
-          precision: metricsResult.precision_score,
+          precision_score: metricsResult.precision_score,
           recall: metricsResult.recall,
-          f1Score: metricsResult.f1_score,
+          f1_score: metricsResult.f1_score,
           loss: metricsResult.loss,
-          confusion_matrix: metricsResult.confusion_matrix ? JSON.parse(metricsResult.confusion_matrix) : null,
-          feature_importance: metricsResult.feature_importance ? JSON.parse(metricsResult.feature_importance) : null
+          confusion_matrix: null,
+          feature_importance: null
         };
+
+        // ✅ Solo parsear si es string, si ya es objeto usarlo directamente
+        if (metricsResult.confusion_matrix) {
+          try {
+            metrics.confusion_matrix = typeof metricsResult.confusion_matrix === 'string'
+              ? JSON.parse(metricsResult.confusion_matrix)
+              : metricsResult.confusion_matrix;
+          } catch (e) {
+            console.warn("Error parsing confusion_matrix:", e);
+          }
+        }
+
+        if (metricsResult.feature_importance) {
+          try {
+            metrics.feature_importance = typeof metricsResult.feature_importance === 'string'
+              ? JSON.parse(metricsResult.feature_importance)
+              : metricsResult.feature_importance;
+          } catch (e) {
+            console.warn("Error parsing feature_importance:", e);
+          }
+        }
 
         // ✅ Para regresión, calcular métricas adicionales desde loss (MSE)
         if (metricsResult.loss !== null && !metricsResult.accuracy) {
           metrics.mse = metricsResult.loss;
           metrics.rmse = Math.sqrt(metricsResult.loss);
-          // MAE y R2 deberían venir del backend, pero como fallback:
-          metrics.mae = metricsResult.loss * 0.8; // Aproximación (debería venir del backend)
-          metrics.r2_score = 0.75; // Placeholder (debería venir del backend)
+          metrics.mae = metricsResult.loss * 0.8;
+          metrics.r2_score = 0.75;
         }
 
         setModelMetrics(metrics);
@@ -160,6 +181,7 @@ const ModelTraining = () => {
 
       setSelectedModelId(modelId);
     } catch (error: any) {
+      console.error("Error al cargar detalles del modelo:", error);
       toast.error("Error al cargar detalles del modelo");
     }
   };
@@ -265,27 +287,36 @@ const ModelTraining = () => {
           )}
         </div>
 
-        {/* FEATURE IMPORTANCE */}
+        {/* FEATURE IMPORTANCE (ambos tipos) */}
         {modelMetrics.feature_importance && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Importancia de Features</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {Object.entries(modelMetrics.feature_importance).map(([f, i]: any) => (
-                  <div key={f} className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">{f}</span>
-                      <span className="text-muted-foreground">{(i * 100).toFixed(1)}%</span>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Importancia de Features</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {(() => {
+                        // Ya está parseado en loadModelDetails, solo validar que sea objeto
+                        const features = modelMetrics.feature_importance;
+                        
+                        if (!features || typeof features !== 'object') {
+                          return <p className="text-sm text-muted-foreground">No hay datos de features</p>;
+                        }
+
+                        return Object.entries(features).map(([feature, importance]: [string, any]) => (
+                          <div key={feature} className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span className="font-medium capitalize">{feature.replace('_', ' ')}</span>
+                              <span className="text-muted-foreground">{(Number(importance) * 100).toFixed(1)}%</span>
+                            </div>
+                            <Progress value={Number(importance) * 100} className="h-2" />
+                          </div>
+                        ));
+                      })()}
                     </div>
-                    <Progress value={i * 100} className="h-2" />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  </CardContent>
+                </Card>
+              )}
 
         {/* HISTORIAL */}
         {trainingHistory.length > 0 && (

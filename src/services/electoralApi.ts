@@ -293,6 +293,75 @@ class ElectoralApiService {
     const response = await axios.get(`${API_URL.replace('/api', '')}/health`);
     return response.data;
   }
+  // ============ ANALYTICS ============
+  
+  /**
+   * Obtiene resumen general (KPIs)
+   */
+  async getAnalyticsOverview() {
+    const response = await axios.get(`${API_URL}/analytics/overview`);
+    return response.data;
+  }
+
+  /**
+   * Análisis demográfico detallado
+   */
+  async getAnalyticsDemographic() {
+    const response = await axios.get(`${API_URL}/analytics/demographic`);
+    return response.data;
+  }
+
+  /**
+   * Análisis geográfico
+   */
+  async getAnalyticsGeographic(departamento?: string, provincia?: string) {
+    const response = await axios.get(`${API_URL}/analytics/geographic`, {
+      params: { departamento, provincia }
+    });
+    return response.data;
+  }
+
+  /**
+   * Análisis temporal
+   */
+  async getAnalyticsTemporal() {
+    const response = await axios.get(`${API_URL}/analytics/temporal`);
+    return response.data;
+  }
+
+  /**
+   * Desempeño por candidato
+   */
+  async getAnalyticsCandidates() {
+    const response = await axios.get(`${API_URL}/analytics/candidates`);
+    return response.data;
+  }
+
+  /**
+   * Clustering K-Means
+   */
+  async getAnalyticsClustering(n_clusters: number = 3) {
+    const response = await axios.get(`${API_URL}/analytics/clustering`, {
+      params: { n_clusters }
+    });
+    return response.data;
+  }
+
+  /**
+   * Matriz de correlaciones
+   */
+  async getAnalyticsCorrelations() {
+    const response = await axios.get(`${API_URL}/analytics/correlations`);
+    return response.data;
+  }
+
+  /**
+   * Predicciones ML
+   */
+  async getAnalyticsPredictions() {
+    const response = await axios.get(`${API_URL}/analytics/predictions`);
+    return response.data;
+  }
 }
 
 // ============ EXPORTAR INSTANCIA ============

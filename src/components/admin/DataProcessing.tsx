@@ -218,15 +218,95 @@ const DataProcessing = () => {
           {dataQuality && dataQuality.success && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Reporte de Calidad de Datos</h3>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Total de Registros</span><Badge variant="outline">{dataQuality.total_records}</Badge></div></CardContent></Card>
-                <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Registros Completos</span><Badge className="bg-green-500">{dataQuality.complete_records} ({dataQuality.quality_score}%)</Badge></div></CardContent></Card>
-                <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Datos Faltantes/N/A</span><Badge variant={dataQuality.missing_data > 0 ? "destructive" : "outline"}>{dataQuality.missing_data}</Badge></div></CardContent></Card>
-                <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Emails Válidos</span><Badge className="bg-blue-500">{dataQuality.valid_emails}</Badge></div></CardContent></Card>
-                <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Duplicados</span><Badge variant={dataQuality.duplicates > 0 ? "destructive" : "outline"}>{dataQuality.duplicates}</Badge></div></CardContent></Card>
-                <Card><CardContent className="p-4"><div className="flex items-center justify-between"><span className="text-muted-foreground">Outliers</span><Badge variant={dataQuality.outliers > 0 ? "secondary" : "outline"}>{dataQuality.outliers}</Badge></div></CardContent></Card>
+              <div className="grid gap-4 md:grid-cols-3">
+                {/* Total de Registros */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Total de Registros</span>
+                      <Badge variant="outline">{dataQuality.total_records}</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Registros Completos (sin NULL ni N/A) */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Registros Completos</span>
+                      <Badge className="bg-green-500">
+                        {dataQuality.complete_records} ({dataQuality.quality_score}%)
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Datos NULL (valores realmente nulos) */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Datos NULL</span>
+                      <Badge variant={dataQuality.missing_data > 0 ? "destructive" : "outline"}>
+                        {dataQuality.missing_data}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Campos vacíos o nulos sin procesar
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Datos con N/A (ya procesados) */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Datos con N/A</span>
+                      <Badge variant="secondary" className="bg-blue-500 text-white">
+                        {votes.filter(v => {
+                          const str = (val: any) => String(val || '').trim().toUpperCase();
+                          return str(v.voter_name) === 'N/A' || 
+                                 str(v.voter_dni) === 'N/A' || 
+                                 str(v.voter_email) === 'N/A' || 
+                                 str(v.voter_location) === 'N/A';
+                        }).length}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Datos ya reemplazados anteriormente
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Emails Válidos */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Emails Válidos</span>
+                      <Badge className="bg-blue-500">{dataQuality.valid_emails}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Emails con formato correcto (@)
+                    </p>
+                  </CardContent>
+                </Card>
+
+                {/* Duplicados */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Duplicados</span>
+                      <Badge variant={dataQuality.duplicates > 0 ? "destructive" : "outline"}>
+                        {dataQuality.duplicates}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Emails repetidos (excluyendo N/A)
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
 
+              {/* Card de Calidad General */}
               <Card className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-800">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -236,7 +316,7 @@ const DataProcessing = () => {
                         Calidad: {dataQuality.quality_score >= 90 ? "Excelente" : dataQuality.quality_score >= 70 ? "Buena" : "Mejorable"}
                       </p>
                       <p className="text-sm text-green-700 dark:text-green-300">
-                        Registros sin N/A listos para análisis ML
+                        {dataQuality.complete_records} registros sin NULL listos para análisis ML
                       </p>
                     </div>
                   </div>

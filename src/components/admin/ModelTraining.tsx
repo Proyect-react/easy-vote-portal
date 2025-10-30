@@ -132,37 +132,31 @@ const ModelTraining = () => {
       ]);
 
       if (metricsResult) {
-        // ✅ Parsear métricas correctamente según tipo de modelo
+        // ✅ Función helper para parsear JSON de forma segura
+        const safeParseJSON = (value: any): any => {
+          if (!value) return null;
+          if (typeof value === 'object') return value; // Ya es objeto
+          if (typeof value === 'string') {
+            try {
+              return JSON.parse(value);
+            } catch (e) {
+              console.warn("Error parsing JSON:", e);
+              return null;
+            }
+          }
+          return null;
+        };
+
+        // ✅ Parsear métricas correctamente
         const metrics: any = {
           accuracy: metricsResult.accuracy,
           precision_score: metricsResult.precision_score,
           recall: metricsResult.recall,
           f1_score: metricsResult.f1_score,
           loss: metricsResult.loss,
-          confusion_matrix: null,
-          feature_importance: null
+          confusion_matrix: safeParseJSON(metricsResult.confusion_matrix),
+          feature_importance: safeParseJSON(metricsResult.feature_importance)
         };
-
-        // ✅ Solo parsear si es string, si ya es objeto usarlo directamente
-        if (metricsResult.confusion_matrix) {
-          try {
-            metrics.confusion_matrix = typeof metricsResult.confusion_matrix === 'string'
-              ? JSON.parse(metricsResult.confusion_matrix)
-              : metricsResult.confusion_matrix;
-          } catch (e) {
-            console.warn("Error parsing confusion_matrix:", e);
-          }
-        }
-
-        if (metricsResult.feature_importance) {
-          try {
-            metrics.feature_importance = typeof metricsResult.feature_importance === 'string'
-              ? JSON.parse(metricsResult.feature_importance)
-              : metricsResult.feature_importance;
-          } catch (e) {
-            console.warn("Error parsing feature_importance:", e);
-          }
-        }
 
         // ✅ Para regresión, calcular métricas adicionales desde loss (MSE)
         if (metricsResult.loss !== null && !metricsResult.accuracy) {
@@ -172,6 +166,7 @@ const ModelTraining = () => {
           metrics.r2_score = 0.75;
         }
 
+        console.log("✅ Métricas procesadas:", metrics);
         setModelMetrics(metrics);
       }
 
@@ -181,7 +176,7 @@ const ModelTraining = () => {
 
       setSelectedModelId(modelId);
     } catch (error: any) {
-      console.error("Error al cargar detalles del modelo:", error);
+      console.error("❌ Error al cargar detalles del modelo:", error);
       toast.error("Error al cargar detalles del modelo");
     }
   };
@@ -287,36 +282,34 @@ const ModelTraining = () => {
           )}
         </div>
 
-        {/* FEATURE IMPORTANCE (ambos tipos) */}
         {modelMetrics.feature_importance && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Importancia de Features</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {(() => {
-                        // Ya está parseado en loadModelDetails, solo validar que sea objeto
-                        const features = modelMetrics.feature_importance;
-                        
-                        if (!features || typeof features !== 'object') {
-                          return <p className="text-sm text-muted-foreground">No hay datos de features</p>;
-                        }
+          <Card>
+            <CardHeader>
+              <CardTitle>Importancia de Features</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {(() => {
+                  const features = modelMetrics.feature_importance; // ← SIN JSON.parse()
 
-                        return Object.entries(features).map(([feature, importance]: [string, any]) => (
-                          <div key={feature} className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span className="font-medium capitalize">{feature.replace('_', ' ')}</span>
-                              <span className="text-muted-foreground">{(Number(importance) * 100).toFixed(1)}%</span>
-                            </div>
-                            <Progress value={Number(importance) * 100} className="h-2" />
-                          </div>
-                        ));
-                      })()}
+                  if (!features || typeof features !== 'object' || Array.isArray(features)) {
+                    return <p>No hay datos de features</p>;
+                  }
+
+                  return Object.entries(features).map(([feature, importance]) => (
+                    <div key={feature} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium capitalize">{feature.replace('_', ' ')}</span>
+                        <span className="text-muted-foreground">{(Number(importance) * 100).toFixed(1)}%</span>
+                      </div>
+                      <Progress value={Number(importance) * 100} className="h-2" />
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  ));
+                })()}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* HISTORIAL */}
         {trainingHistory.length > 0 && (
@@ -646,15 +639,40 @@ const ModelTraining = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {Object.entries(JSON.parse(modelMetrics.feature_importance)).map(([feature, importance]: [string, any]) => (
-                        <div key={feature} className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span className="font-medium capitalize">{feature.replace('_', ' ')}</span>
-                            <span className="text-muted-foreground">{(importance * 100).toFixed(1)}%</span>
-                          </div>
-                          <Progress value={importance * 100} className="h-2" />
-                        </div>
-                      ))}
+                      {(() => {
+                        const features = modelMetrics.feature_importance; // ← SIN JSON.parse()
+
+                        // Validar que sea un objeto válido
+                        if (!features || typeof features !== 'object' || Array.isArray(features)) {
+                          console.warn("❌ feature_importance no es un objeto válido:", features);
+                          return <p className="text-sm text-muted-foreground">No hay datos de features</p>;
+                        }
+
+                        const entries = Object.entries(features);
+
+                        if (entries.length === 0) {
+                          return <p className="text-sm text-muted-foreground">No hay features disponibles</p>;
+                        }
+
+                        return entries.map(([feature, importance]: [string, any]) => {
+                          const importanceValue = Number(importance);
+
+                          if (isNaN(importanceValue)) {
+                            console.warn(`❌ Valor inválido para ${feature}:`, importance);
+                            return null;
+                          }
+
+                          return (
+                            <div key={feature} className="space-y-1">
+                              <div className="flex justify-between text-sm">
+                                <span className="font-medium capitalize">{feature.replace(/_/g, ' ')}</span>
+                                <span className="text-muted-foreground">{(importanceValue * 100).toFixed(1)}%</span>
+                              </div>
+                              <Progress value={importanceValue * 100} className="h-2" />
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   </CardContent>
                 </Card>

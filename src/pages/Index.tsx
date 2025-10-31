@@ -272,8 +272,8 @@ export default function ElectoralForm() {
                 Proceso Electoral 2025
               </span>
             </div>
-            <h2 className="text-5xl md:text-7xl font-bold mb-6 text-transparent bg-clip-text metallic-blue drop-shadow-2xl">
-              Tu Voz Construye el Futuro
+            <h2 className="text-5xl md:text-7xl font-bold mb-6 text-white bg-clip-text  drop-shadow-2xl">
+              Tu Voto Construye el Futuro
             </h2>
             <p className="text-xl text-blue-100 max-w-3xl mx-auto mb-12 leading-relaxed drop-shadow-lg">
               Participa en el proceso electoral de manera <strong className="text-white">segura</strong>,

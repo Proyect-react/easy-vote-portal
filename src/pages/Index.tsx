@@ -13,7 +13,7 @@ import provincias from "@/data/Ubicacion/provincias.json";
 import distritos from "@/data/Ubicacion/distritos.json";
 import { electoralApi } from '@/services/electoralApi';
 
-// === UBICACIONES (igual que tú) ===
+// === UBICACIONES ===
 const departamentosArray = Object.values(departamentos).flat();
 const provinciasArray = Object.values(provincias).flat();
 const distritosArray = Object.values(distritos).flat();
@@ -84,7 +84,9 @@ export default function ElectoralForm() {
   const handleVote = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedCandidate || !nombre || !apellido || !dni || !celular || !departamento || !provincia || !distrito || !email) {
+    if (!selectedCandidate || !nombre || !apellido || !dni || !celular || 
+        !departamento || !provincia || !distrito || !email || 
+        !edad || !genero || !educacion) {
       toast.error("Por favor complete todos los campos requeridos");
       return;
     }
@@ -103,14 +105,7 @@ export default function ElectoralForm() {
       toast.error("Ingrese un correo electrónico válido");
       return;
     }
-    if (!selectedCandidate || !nombre || !apellido || !dni || !celular ||
-      !departamento || !provincia || !distrito || !email ||
-      !edad || !genero || !educacion) {  // ← AGREGAR ESTO
-      toast.error("Por favor complete todos los campos requeridos");
-      return;
-    }
 
-    // Validar edad
     const edadNum = parseInt(edad);
     if (edadNum < 18 || edadNum > 99) {
       toast.error("La edad debe estar entre 18 y 99 años");
@@ -136,9 +131,9 @@ export default function ElectoralForm() {
         departamento,
         provincia,
         distrito,
-        edad: parseInt(edad),        // ← AGREGAR
-        genero,                       // ← AGREGAR
-        educacion,                    // ← AGREGAR
+        edad: parseInt(edad),
+        genero,
+        educacion,
         candidate_id: parseInt(selectedCandidate)
       });
 
@@ -156,7 +151,7 @@ export default function ElectoralForm() {
     }
   };
 
-  // === ÉXITO (TU DISEÑO) ===
+  // === PANTALLA DE ÉXITO ===
   if (submitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center p-4">
@@ -189,28 +184,62 @@ export default function ElectoralForm() {
     );
   }
 
-  // === TU FORMULARIO ORIGINAL (100% IGUAL) ===
+  // === FORMULARIO PRINCIPAL ===
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 animate-gradient-shift">
       <style>{`
-        @keyframes gradient-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
-        @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(59, 130, 246, 0.3); } 50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.8), 0 0 60px rgba(59, 130, 246, 0.5); } }
-        @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
-        @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        @keyframes fade-in-up { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-gradient-shift { background-size: 200% 200%; animation: gradient-shift 15s ease infinite; }
-        .animate-float { animation: float 6s ease-in-out infinite; }
-        .animate-glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
-        .animate-shimmer { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); background-size: 1000px 100%; animation: shimmer 3s infinite; }
-        .animate-scale-in { animation: scale-in 0.5s ease-out; }
-        .animate-fade-in-up { animation: fade-in-up 0.8s ease-out; }
-        .metallic-blue { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 25%, #60a5fa 50%, #3b82f6 75%, #1e3a8a 100%); background-size: 200% 200%; }
-        .metallic-border { border: 2px solid; border-image: linear-gradient(135deg, #1e3a8a, #3b82f6, #60a5fa, #3b82f6, #1e3a8a) 1; }
-        .glass-effect { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        @keyframes gradient-shift { 
+          0%, 100% { background-position: 0% 50%; } 
+          50% { background-position: 100% 50%; } 
+        }
+        @keyframes float { 
+          0%, 100% { transform: translateY(0px); } 
+          50% { transform: translateY(-20px); } 
+        }
+        @keyframes glow-pulse { 
+          0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(59, 130, 246, 0.3); } 
+          50% { box-shadow: 0 0 30px rgba(59, 130, 246, 0.8), 0 0 60px rgba(59, 130, 246, 0.5); } 
+        }
+        @keyframes scale-in { 
+          from { transform: scale(0.95); opacity: 0; } 
+          to { transform: scale(1); opacity: 1; } 
+        }
+        @keyframes fade-in-up { 
+          from { transform: translateY(30px); opacity: 0; } 
+          to { transform: translateY(0); opacity: 1; } 
+        }
+        .animate-gradient-shift { 
+          background-size: 200% 200%; 
+          animation: gradient-shift 15s ease infinite; 
+        }
+        .animate-float { 
+          animation: float 6s ease-in-out infinite; 
+        }
+        .animate-glow-pulse { 
+          animation: glow-pulse 2s ease-in-out infinite; 
+        }
+        .animate-scale-in { 
+          animation: scale-in 0.5s ease-out; 
+        }
+        .animate-fade-in-up { 
+          animation: fade-in-up 0.8s ease-out; 
+        }
+        .metallic-blue { 
+          background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 25%, #60a5fa 50%, #3b82f6 75%, #1e3a8a 100%); 
+          background-size: 200% 200%; 
+        }
+        .metallic-border { 
+          border: 2px solid; 
+          border-image: linear-gradient(135deg, #1e3a8a, #3b82f6, #60a5fa, #3b82f6, #1e3a8a) 1; 
+        }
+        .glass-effect { 
+          background: rgba(255, 255, 255, 0.1); 
+          backdrop-filter: blur(10px); 
+          border: 1px solid rgba(255, 255, 255, 0.2); 
+        }
       `}</style>
 
-      {/* === TU HEADER === */}
+      {/* === HEADER === */}
       <header className="metallic-blue shadow-2xl sticky top-0 z-50 backdrop-blur-sm animate-glow-pulse">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
@@ -233,10 +262,9 @@ export default function ElectoralForm() {
         </div>
       </header>
 
-      {/* === TU HERO === */}
+      {/* === HERO SECTION === */}
       <section className="relative overflow-hidden py-20 md:py-28">
         <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 to-transparent"></div>
-        <div className="absolute inset-0 animate-shimmer"></div>
         <div className="container mx-auto px-4 text-center relative z-10">
           <div className="animate-fade-in-up">
             <div className="inline-block mb-6 animate-float">
@@ -244,7 +272,7 @@ export default function ElectoralForm() {
                 Proceso Electoral 2025
               </span>
             </div>
-            <h2 className="text-5xl md:text-7xl font-bold mb-6 text-transparent bg-clip-text metallic-blue animate-shimmer drop-shadow-2xl">
+            <h2 className="text-5xl md:text-7xl font-bold mb-6 text-transparent bg-clip-text metallic-blue drop-shadow-2xl">
               Tu Voz Construye el Futuro
             </h2>
             <p className="text-xl text-blue-100 max-w-3xl mx-auto mb-12 leading-relaxed drop-shadow-lg">
@@ -254,7 +282,7 @@ export default function ElectoralForm() {
             </p>
           </div>
 
-          {/* === TU GRID DE FEATURES === */}
+          {/* === FEATURES GRID === */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-12">
             <Card className="glass-effect shadow-2xl hover:shadow-blue-500/50 transition-all duration-500 animate-scale-in hover:scale-110 border-2 border-blue-400 animate-glow-pulse group">
               <CardContent className="p-6 text-center">
@@ -289,7 +317,7 @@ export default function ElectoralForm() {
         </div>
       </section>
 
-      {/* === TU FORMULARIO === */}
+      {/* === FORMULARIO === */}
       <section className="container mx-auto px-4 pb-20">
         <Card className="max-w-5xl mx-auto shadow-2xl border-4 animate-scale-in metallic-border glass-effect animate-glow-pulse">
           <CardHeader className="metallic-blue border-b-4 border-blue-400">
@@ -308,7 +336,7 @@ export default function ElectoralForm() {
           <CardContent className="p-8 bg-gradient-to-br from-slate-800/95 to-blue-900/95">
             <form onSubmit={handleVote} className="space-y-8">
 
-              {/* === INFO PERSONAL (igual) === */}
+              {/* === INFORMACIÓN PERSONAL === */}
               <div className="space-y-6 animate-fade-in-up">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-10 h-10 rounded-full metallic-blue flex items-center justify-center text-white font-bold shadow-2xl animate-glow-pulse">
@@ -335,7 +363,8 @@ export default function ElectoralForm() {
                     <Input id="celular" value={celular} onChange={(e) => setCelular(e.target.value.replace(/\D/g, '').slice(0, 9))} required placeholder="Ej: 987654321" maxLength={9} className="h-12 glass-effect border-2 border-blue-400 focus:border-blue-300 focus:ring-blue-300 text-white placeholder:text-blue-200 transition-all duration-300 hover:shadow-blue-500/50 hover:shadow-lg" />
                   </div>
                 </div>
-                {/* === NUEVOS CAMPOS DEMOGRÁFICOS === */}
+
+                {/* === INFORMACIÓN DEMOGRÁFICA === */}
                 <div className="border-t-2 border-blue-400 pt-8 mt-8"></div>
 
                 <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
@@ -410,7 +439,7 @@ export default function ElectoralForm() {
                   </div>
                 </div>
 
-                {/* === UBICACIÓN (igual) === */}
+                {/* === UBICACIÓN === */}
                 <div className="grid gap-6 md:grid-cols-3">
                   <div className="space-y-2 animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
                     <Label htmlFor="departamento" className="text-base text-blue-100">Departamento *</Label>
@@ -471,7 +500,7 @@ export default function ElectoralForm() {
 
               <div className="border-t-2 border-blue-400 pt-8"></div>
 
-              {/* === CANDIDATOS (carga real) === */}
+              {/* === SELECCIÓN DE CANDIDATO === */}
               <div className="space-y-6 animate-fade-in-up" style={{ animationDelay: "0.8s" }}>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-10 h-10 rounded-full metallic-blue flex items-center justify-center text-white font-bold shadow-2xl animate-glow-pulse">
@@ -526,6 +555,7 @@ export default function ElectoralForm() {
 
               <div className="border-t-2 border-blue-400 pt-8"></div>
 
+              {/* === BOTÓN DE ENVÍO === */}
               <Button
                 type="submit"
                 className="w-full metallic-blue shadow-2xl h-16 text-lg font-bold hover:scale-105 transition-all duration-500 animate-glow-pulse border-2 border-blue-300 hover:border-blue-200"
@@ -553,7 +583,7 @@ export default function ElectoralForm() {
         </Card>
       </section>
 
-      {/* === TU FOOTER === */}
+      {/* === FOOTER === */}
       <footer className="bg-gradient-to-t from-slate-900 to-transparent border-t-2 border-blue-500/50 py-12">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8 mb-8">
